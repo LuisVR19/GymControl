@@ -11,8 +11,11 @@ COPY . .
 ARG SUPABASE_URL
 ARG SUPABASE_ANON_KEY
 
-RUN echo "export const environment = { production: true, supabase: { url: '${SUPABASE_URL}', anonKey: '${SUPABASE_ANON_KEY}' } };" \
-    > src/environments/environment.ts
+RUN test -n "$SUPABASE_URL" || (echo "ERROR: SUPABASE_URL build arg is missing" && exit 1)
+RUN test -n "$SUPABASE_ANON_KEY" || (echo "ERROR: SUPABASE_ANON_KEY build arg is missing" && exit 1)
+
+RUN printf 'export const environment = {\n  production: true,\n  supabase: {\n    url: "%s",\n    anonKey: "%s",\n  },\n};\n' \
+    "$SUPABASE_URL" "$SUPABASE_ANON_KEY" > src/environments/environment.ts
 
 RUN npm run build
 
