@@ -55,6 +55,7 @@ export interface RegisterPaymentPayload {
 @Injectable({ providedIn: 'root' })
 export class PaymentService {
   private auth = inject(AuthService);
+  private _reqId = 0;
 
   readonly payments = signal<Payment[]>([]);
   readonly loading = signal(false);
@@ -82,6 +83,7 @@ export class PaymentService {
     const gymId = this.auth.gymId();
     if (!gymId) return;
 
+    const reqId = ++this._reqId;
     this.loading.set(true);
     this.error.set(null);
 
@@ -92,12 +94,14 @@ export class PaymentService {
         .eq('gym_id', gymId)
         .order('date', { ascending: false });
 
+      if (reqId !== this._reqId) return;
       if (error) this.error.set(error.message);
       else this.payments.set((data ?? []).map(mapPayment));
     } catch (err) {
+      if (reqId !== this._reqId) return;
       this.error.set(err instanceof Error ? err.message : 'Error inesperado');
     } finally {
-      this.loading.set(false);
+      if (reqId === this._reqId) this.loading.set(false);
     }
   }
 

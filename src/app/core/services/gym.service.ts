@@ -6,6 +6,7 @@ import type { GymRow } from '../supabase/database.types';
 @Injectable({ providedIn: 'root' })
 export class GymService {
   private auth = inject(AuthService);
+  private _reqId = 0;
 
   readonly gym = signal<GymRow | null>(null);
   readonly loading = signal(false);
@@ -15,6 +16,7 @@ export class GymService {
     const gymId = this.auth.gymId();
     if (!gymId) return;
 
+    const reqId = ++this._reqId;
     this.loading.set(true);
     this.error.set(null);
 
@@ -25,12 +27,14 @@ export class GymService {
         .eq('id', gymId)
         .single();
 
+      if (reqId !== this._reqId) return;
       if (error) this.error.set(error.message);
       else this.gym.set(data);
     } catch (err) {
+      if (reqId !== this._reqId) return;
       this.error.set(err instanceof Error ? err.message : 'Error inesperado');
     } finally {
-      this.loading.set(false);
+      if (reqId === this._reqId) this.loading.set(false);
     }
   }
 

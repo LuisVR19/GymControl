@@ -92,9 +92,14 @@ export class ClientDetailComponent implements OnInit {
 
   private async loadProgress(): Promise<void> {
     this.loadingProgress.set(true);
-    const entries = await this.clientService.loadClientProgress(this.client.id);
-    this.progress.set(entries);
-    this.loadingProgress.set(false);
+    try {
+      const entries = await this.clientService.loadClientProgress(this.client.id);
+      this.progress.set(entries);
+    } catch (err) {
+      console.error('Error al cargar progreso', err);
+    } finally {
+      this.loadingProgress.set(false);
+    }
   }
 
   startAssigning(): void {
@@ -118,22 +123,25 @@ export class ClientDetailComponent implements OnInit {
     this.saving.set(true);
     this.saveError.set(null);
 
-    const { error } = await this.clientService.assignMembership(
-      this.client.id,
-      gymId,
-      plan.id,
-      this.startDate,
-      plan.durationDays,
-      plan.price,
-      this.paymentMethod(),
-    );
-
-    this.saving.set(false);
-
-    if (error) {
-      this.saveError.set(error);
-    } else {
-      this.assigningMembership.set(false);
+    try {
+      const { error } = await this.clientService.assignMembership(
+        this.client.id,
+        gymId,
+        plan.id,
+        this.startDate,
+        plan.durationDays,
+        plan.price,
+        this.paymentMethod(),
+      );
+      if (error) {
+        this.saveError.set(error);
+      } else {
+        this.assigningMembership.set(false);
+      }
+    } catch (err) {
+      this.saveError.set(err instanceof Error ? err.message : 'Error inesperado');
+    } finally {
+      this.saving.set(false);
     }
   }
 
@@ -154,19 +162,22 @@ export class ClientDetailComponent implements OnInit {
     this.savingRoutine.set(true);
     this.routineError.set(null);
 
-    if (this.client.assignedRoutine && this.client.assignedRoutine !== newId) {
-      await this.routineService.unassignClient(this.client.assignedRoutine, this.client.id);
-    }
-
-    const { error } = await this.routineService.assignClient(newId, this.client.id);
-    this.savingRoutine.set(false);
-
-    if (error) {
-      this.routineError.set(error);
-    } else {
-      this.clientService.loadClients();
-      this.assigningRoutine.set(false);
-      this.toast.success('Rutina asignada');
+    try {
+      if (this.client.assignedRoutine && this.client.assignedRoutine !== newId) {
+        await this.routineService.unassignClient(this.client.assignedRoutine, this.client.id);
+      }
+      const { error } = await this.routineService.assignClient(newId, this.client.id);
+      if (error) {
+        this.routineError.set(error);
+      } else {
+        this.clientService.loadClients();
+        this.assigningRoutine.set(false);
+        this.toast.success('Rutina asignada');
+      }
+    } catch (err) {
+      this.routineError.set(err instanceof Error ? err.message : 'Error inesperado');
+    } finally {
+      this.savingRoutine.set(false);
     }
   }
 
@@ -184,19 +195,24 @@ export class ClientDetailComponent implements OnInit {
     if (!gymId) return;
 
     this.sendingNotif.set(true);
-    const { error } = await this.notifService.send(gymId, this.client.id, {
-      cat:   this.notifCat(),
-      from:  this.auth.displayName() || 'Owner',
-      title,
-      desc:  this.notifBody.trim(),
-    });
-    this.sendingNotif.set(false);
-
-    if (error) {
-      this.toast.error('Error al enviar: ' + error);
-    } else {
-      this.toast.success('Notificación enviada');
-      this.showNotifModal.set(false);
+    try {
+      const { error } = await this.notifService.send(gymId, this.client.id, {
+        cat:   this.notifCat(),
+        from:  this.auth.displayName() || 'Owner',
+        title,
+        desc:  this.notifBody.trim(),
+      });
+      if (error) {
+        this.toast.error('Error al enviar: ' + error);
+      } else {
+        this.toast.success('Notificación enviada');
+        this.showNotifModal.set(false);
+      }
+    } catch (err) {
+      this.toast.error('Error al enviar notificación');
+      console.error('sendNotification error', err);
+    } finally {
+      this.sendingNotif.set(false);
     }
   }
 

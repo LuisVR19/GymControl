@@ -107,18 +107,24 @@ export class GymComponent implements OnInit {
 
   async save(): Promise<void> {
     this.saving = true;
-    const { error } = await this.gymService.updateGym({
-      name:          this.draft.name,
-      primary_color: this.draft.color,
-    });
-    if (error) {
-      this.toast.error('Error al guardar: ' + error);
-    } else {
-      this.data    = { ...this.draft };
-      this.editing = false;
-      this.toast.success('Datos del gym actualizados');
+    try {
+      const { error } = await this.gymService.updateGym({
+        name:          this.draft.name,
+        primary_color: this.draft.color,
+      });
+      if (error) {
+        this.toast.error('Error al guardar: ' + error);
+      } else {
+        this.data    = { ...this.draft };
+        this.editing = false;
+        this.toast.success('Datos del gym actualizados');
+      }
+    } catch (err) {
+      this.toast.error('Error inesperado al guardar');
+      console.error('save gym error', err);
+    } finally {
+      this.saving = false;
     }
-    this.saving = false;
   }
 
   toggleDayClosed(dayId: string): void {
