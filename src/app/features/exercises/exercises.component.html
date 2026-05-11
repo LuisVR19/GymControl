@@ -1,0 +1,290 @@
+<app-header pageTitle="Ejercicios" [pageSubtitle]="exerciseService.exercises().length + ' ejercicios'" />
+
+<div class="exercises-shell">
+
+  <!-- ── Left: exercise list ── -->
+  <div class="exercises-sidebar">
+    <div class="exercises-sidebar-header">
+      <div class="label-mono">Biblioteca</div>
+      <button class="btn btn-primary btn-sm" (click)="showNewModal.set(true)">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        Nuevo
+      </button>
+    </div>
+
+    <div class="search-wrap">
+      <div class="search-box">
+        <span class="search-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.6"/><path d="M16 16l5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </span>
+        <input class="input" type="text" placeholder="Buscar ejercicio..." [value]="searchQuery()" (input)="searchQuery.set($any($event.target).value)" />
+      </div>
+    </div>
+
+    <div class="exercise-list">
+      @if (loading()) {
+        @for (_ of skeletonRows; track $index) {
+          <div class="exercise-card" style="pointer-events:none">
+            <span class="skeleton skeleton-text" style="width:75%;margin-bottom:6px"></span>
+            <span class="skeleton skeleton-text" style="width:45%"></span>
+          </div>
+        }
+      } @else if (error()) {
+        <div style="padding:16px;font-size:12px;color:var(--danger)">
+          Error al cargar.
+          <button class="btn btn-ghost btn-sm" style="display:block;margin-top:6px;padding:0;color:var(--danger);text-decoration:underline" (click)="retry()">Reintentar</button>
+        </div>
+      } @else if (filteredExercises().length === 0) {
+        <div class="empty-state" style="padding:32px 16px">
+          <svg class="empty-icon" width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <div class="empty-title" style="font-size:13px">{{ searchQuery() ? 'Sin resultados' : 'Sin ejercicios' }}</div>
+          <div class="empty-desc" style="font-size:12px">{{ searchQuery() ? 'Intenta con otro término' : 'Crea tu primer ejercicio' }}</div>
+        </div>
+      } @else {
+        @for (ex of filteredExercises(); track ex.id) {
+          <button class="exercise-card" [class.active]="selected()?.id === ex.id" (click)="select(ex)">
+            <div class="exercise-name">{{ ex.name }}</div>
+            <div class="exercise-meta">
+              @if (ex.muscleGroup) {
+                <span class="mono" style="font-size:10px;color:var(--ink-3)">{{ ex.muscleGroup }}</span>
+              }
+              @if (ex.videoUrl) {
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" style="color:var(--accent)">
+                  <polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/>
+                </svg>
+              }
+            </div>
+          </button>
+        }
+      }
+    </div>
+  </div>
+
+  <!-- ── Right: detail / editor ── -->
+  @if (!selected() && !loading()) {
+    <div class="exercise-editor" style="display:flex;align-items:center;justify-content:center">
+      <div class="empty-state">
+        <svg class="empty-icon" width="36" height="36" viewBox="0 0 24 24" fill="none"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2M12 12h.01M12 16h.01" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <div class="empty-title">Selecciona o crea un ejercicio</div>
+        <div class="empty-desc">La biblioteca de ejercicios aparecerá aquí</div>
+        <button class="btn btn-primary btn-sm" style="margin-top:8px" (click)="showNewModal.set(true)">Nuevo ejercicio</button>
+      </div>
+    </div>
+  }
+
+  @if (selected()) {
+    <div class="exercise-editor">
+
+      <!-- Editor header -->
+      <div class="editor-header">
+        <div>
+          @if (editMode()) {
+            <input class="input" [(ngModel)]="draft.name" style="font-family:var(--font-display);font-size:20px;font-weight:600;width:320px" placeholder="Nombre del ejercicio" />
+          } @else {
+            <h2 style="font-size:20px">{{ selected()!.name }}</h2>
+          }
+          @if (selected()!.muscleGroup && !editMode()) {
+            <div class="mono" style="font-size:12px;color:var(--ink-3);margin-top:4px">{{ selected()!.muscleGroup }}</div>
+          }
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          @if (editMode()) {
+            <button class="btn btn-secondary" (click)="cancelEdit()">Cancelar</button>
+            <button class="btn btn-accent" [disabled]="saving()" (click)="saveEdit()">
+              {{ saving() ? 'Guardando…' : 'Guardar' }}
+            </button>
+          } @else {
+            <button class="btn btn-secondary" (click)="startEdit()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.1 2.1 0 113 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Editar
+            </button>
+          }
+          <button class="btn btn-danger btn-sm btn-icon" title="Eliminar ejercicio" (click)="deleteSelected()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Content grid -->
+      <div class="content-grid">
+
+        <!-- Información card -->
+        <div class="card info-card">
+          <div class="label-mono" style="margin-bottom:16px">Información</div>
+
+          @if (editMode()) {
+            <div style="display:flex;flex-direction:column;gap:14px">
+              <div class="form-group">
+                <label>Nombre *</label>
+                <input class="input" [(ngModel)]="draft.name" placeholder="Nombre del ejercicio" />
+              </div>
+              <div class="form-group">
+                <label>Descripción</label>
+                <textarea class="input" [(ngModel)]="draft.description" rows="4" placeholder="Descripción, cómo ejecutarlo..."></textarea>
+              </div>
+              <div class="form-group">
+                <label>Grupo muscular</label>
+                <select class="input" [(ngModel)]="draft.muscleGroup">
+                  <option value="">Sin especificar</option>
+                  @for (mg of muscleGroups; track mg) {
+                    <option [value]="mg">{{ mg }}</option>
+                  }
+                </select>
+              </div>
+            </div>
+          } @else {
+            <div style="display:flex;flex-direction:column;gap:14px">
+              <div>
+                <div class="label-mono" style="font-size:9px;margin-bottom:4px">Nombre</div>
+                <div style="font-size:14px;font-weight:500">{{ selected()!.name }}</div>
+              </div>
+              <div>
+                <div class="label-mono" style="font-size:9px;margin-bottom:4px">Descripción</div>
+                <div style="font-size:13px;color:var(--ink-2);line-height:1.6">
+                  {{ selected()!.description || '—' }}
+                </div>
+              </div>
+              <div>
+                <div class="label-mono" style="font-size:9px;margin-bottom:4px">Grupo muscular</div>
+                <div style="font-size:13px;font-weight:500">{{ selected()!.muscleGroup || '—' }}</div>
+              </div>
+            </div>
+          }
+        </div>
+
+        <!-- Video card -->
+        <div class="card video-card">
+          <div class="label-mono" style="margin-bottom:16px">Video de referencia</div>
+
+          <!-- Hidden file input -->
+          <input #videoInput type="file" accept="video/*" style="display:none" (change)="onVideoSelected($event)" />
+
+          @if (editMode()) {
+            <!-- Tab toggle -->
+            <div class="video-tabs">
+              <button class="tab-btn" [class.active]="videoTab() === 'upload'" (click)="videoTab.set('upload')">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Archivo
+              </button>
+              <button class="tab-btn" [class.active]="videoTab() === 'youtube'" (click)="videoTab.set('youtube')">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M22.54 6.42a2.78 2.78 0 00-1.95-1.96C18.88 4 12 4 12 4s-6.88 0-8.59.46A2.78 2.78 0 001.46 6.42 29 29 0 001 12a29 29 0 00.46 5.58 2.78 2.78 0 001.95 1.96C5.12 20 12 20 12 20s6.88 0 8.59-.46a2.78 2.78 0 001.95-1.96A29 29 0 0023 12a29 29 0 00-.46-5.58z" stroke="currentColor" stroke-width="1.5"/><polygon points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02" fill="currentColor"/></svg>
+                YouTube
+              </button>
+            </div>
+
+            @if (videoTab() === 'upload') {
+              @if (uploading()) {
+                <div class="skeleton" style="width:100%;height:180px;border-radius:var(--radius-md)"></div>
+                <div style="font-size:12px;color:var(--ink-3);text-align:center;margin-top:10px">Subiendo video…</div>
+              } @else if (selected()!.videoUrl) {
+                <video [src]="selected()!.videoUrl!" controls style="width:100%;border-radius:var(--radius-md);max-height:220px;background:#000"></video>
+                <div style="display:flex;gap:8px;margin-top:10px">
+                  <button class="btn btn-secondary btn-sm" style="flex:1" (click)="videoInput.click()">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    Reemplazar
+                  </button>
+                  <button class="btn btn-ghost btn-sm" style="color:var(--danger)" (click)="removeVideo()">Eliminar</button>
+                </div>
+              } @else {
+                <div class="upload-zone" (click)="videoInput.click()">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <div style="font-size:13px;font-weight:500">Subir video de referencia</div>
+                  <div style="font-size:11px">MP4, MOV, WebM · máx. 500 MB</div>
+                </div>
+              }
+            }
+
+            @if (videoTab() === 'youtube') {
+              <div class="form-group" style="margin-bottom:12px">
+                <label>URL de YouTube</label>
+                <input class="input" [ngModel]="draftYoutubeUrl()" (ngModelChange)="draftYoutubeUrl.set($event)" placeholder="https://youtube.com/watch?v=…" />
+              </div>
+              @if (draftEmbedUrl()) {
+                <div style="position:relative;padding-bottom:56.25%;border-radius:var(--radius-md);overflow:hidden;background:#000">
+                  <iframe
+                    [src]="draftEmbedUrl()!"
+                    style="position:absolute;top:0;left:0;width:100%;height:100%;border:0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowfullscreen
+                  ></iframe>
+                </div>
+                @if (selected()!.youtubeUrl) {
+                  <button class="btn btn-ghost btn-sm" style="margin-top:8px;color:var(--danger)" (click)="removeYoutube()">Eliminar enlace</button>
+                }
+              } @else if (draftYoutubeUrl()) {
+                <div style="font-size:12px;color:var(--danger);margin-top:4px">URL de YouTube inválida</div>
+              } @else {
+                <div class="no-video" style="min-height:140px">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M22.54 6.42a2.78 2.78 0 00-1.95-1.96C18.88 4 12 4 12 4s-6.88 0-8.59.46A2.78 2.78 0 001.46 6.42 29 29 0 001 12a29 29 0 00.46 5.58 2.78 2.78 0 001.95 1.96C5.12 20 12 20 12 20s6.88 0 8.59-.46a2.78 2.78 0 001.95-1.96A29 29 0 0023 12a29 29 0 00-.46-5.58z" stroke="currentColor" stroke-width="1.5"/><polygon points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02" fill="currentColor"/></svg>
+                  <div style="font-size:12px;color:var(--ink-3)">Pega una URL de YouTube arriba</div>
+                </div>
+              }
+            }
+
+          } @else {
+            <!-- View mode -->
+            @if (embedUrl()) {
+              <div style="position:relative;padding-bottom:56.25%;border-radius:var(--radius-md);overflow:hidden;background:#000">
+                <iframe
+                  [src]="embedUrl()!"
+                  style="position:absolute;top:0;left:0;width:100%;height:100%;border:0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowfullscreen
+                ></iframe>
+              </div>
+            } @else if (selected()!.videoUrl) {
+              <video [src]="selected()!.videoUrl!" controls style="width:100%;border-radius:var(--radius-md);max-height:260px;background:#000"></video>
+            } @else {
+              <div class="no-video">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><rect x="2" y="6" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M10 9l5 3-5 3V9z" fill="currentColor"/></svg>
+                <div style="font-size:13px;color:var(--ink-3)">Sin video de referencia</div>
+                <div style="font-size:11px;color:var(--ink-4)">Haz clic en Editar para subir uno</div>
+              </div>
+            }
+          }
+        </div>
+
+      </div>
+    </div>
+  }
+
+</div>
+
+<!-- New exercise modal -->
+@if (showNewModal()) {
+  <div class="modal-overlay" (click)="showNewModal.set(false)">
+    <div class="modal-panel" (click)="$event.stopPropagation()">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:22px">
+        <h3>Nuevo ejercicio</h3>
+        <button class="btn btn-ghost btn-icon" (click)="showNewModal.set(false)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="form-group">
+          <label>Nombre *</label>
+          <input class="input" [(ngModel)]="newName" placeholder="Ej: Press banca" />
+        </div>
+        <div class="form-group">
+          <label>Descripción</label>
+          <textarea class="input" [(ngModel)]="newDesc" rows="3" placeholder="Descripción del ejercicio..."></textarea>
+        </div>
+        <div class="form-group">
+          <label>Grupo muscular</label>
+          <select class="input" [(ngModel)]="newMuscleGroup">
+            <option value="">Sin especificar</option>
+            @for (mg of muscleGroups; track mg) {
+              <option [value]="mg">{{ mg }}</option>
+            }
+          </select>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:22px;justify-content:flex-end">
+        <button class="btn btn-secondary" (click)="showNewModal.set(false)">Cancelar</button>
+        <button class="btn btn-primary" [disabled]="submitting() || !newName.trim()" (click)="createExercise()">
+          {{ submitting() ? 'Creando…' : 'Crear ejercicio' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

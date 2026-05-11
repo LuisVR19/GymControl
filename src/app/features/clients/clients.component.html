@@ -1,0 +1,197 @@
+<app-header pageTitle="Clientes" [pageSubtitle]="filteredClients().length + ' clientes'" />
+
+<div class="content">
+
+  <!-- Filters bar -->
+  <div class="filters-bar">
+    <div class="search-box" style="flex:1;max-width:320px">
+      <span class="search-icon">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.6"/><path d="M16 16l5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </span>
+      <input class="input" type="text" placeholder="Buscar cliente..." [value]="searchQuery()" (input)="searchQuery.set($any($event.target).value)" />
+    </div>
+
+    <div style="display:flex;gap:8px">
+      @for (opt of statusOptions; track opt.value) {
+        <button class="btn btn-secondary btn-sm" [class.active]="statusFilter() === opt.value" (click)="statusFilter.set(opt.value)">
+          {{ opt.label }}
+        </button>
+      }
+    </div>
+
+    <select class="input" style="width:auto" (change)="planFilter.set($any($event.target).value)">
+      @for (opt of planOptions; track opt.value) {
+        <option [value]="opt.value">{{ opt.label }}</option>
+      }
+    </select>
+
+    <button class="btn btn-primary" (click)="showAddModal.set(true)">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      Nuevo cliente
+    </button>
+  </div>
+
+  <!-- Error banner -->
+  @if (error()) {
+    <div class="error-banner">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5"/><path d="M12 8v4M12 16h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      {{ error() }}
+      <button (click)="retry()">Reintentar</button>
+    </div>
+  }
+
+  <!-- Table -->
+  <div class="card" style="padding:0;overflow:hidden">
+    <table class="table" style="padding:0">
+      <thead style="padding:0 22px">
+        <tr>
+          <th style="padding:14px 22px">Cliente</th>
+          <th style="padding:14px 8px">Membresía</th>
+          <th style="padding:14px 8px">Estado</th>
+          <th style="padding:14px 8px">Asistencia</th>
+          <th style="padding:14px 8px">Próximo pago</th>
+          <th style="padding:14px 8px">Rutina</th>
+          <th style="padding:14px 22px;text-align:right">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (loading()) {
+          @for (_ of skeletonRows; track $index) {
+            <tr class="skeleton-row">
+              <td style="padding:14px 22px">
+                <div style="display:flex;align-items:center;gap:12px">
+                  <span class="skeleton" style="width:36px;height:36px;border-radius:50%;flex-shrink:0"></span>
+                  <div style="display:flex;flex-direction:column;gap:5px">
+                    <span class="skeleton skeleton-text" style="width:120px"></span>
+                    <span class="skeleton skeleton-text" style="width:80px"></span>
+                  </div>
+                </div>
+              </td>
+              <td style="padding:14px 8px"><span class="skeleton skeleton-text" style="width:70px"></span></td>
+              <td style="padding:14px 8px"><span class="skeleton skeleton-pill"></span></td>
+              <td style="padding:14px 8px"><span class="skeleton skeleton-text" style="width:80px"></span></td>
+              <td style="padding:14px 8px"><span class="skeleton skeleton-text" style="width:60px"></span></td>
+              <td style="padding:14px 8px"><span class="skeleton skeleton-text" style="width:70px"></span></td>
+              <td style="padding:14px 22px;text-align:right"><span class="skeleton skeleton-text" style="width:50px;margin-left:auto"></span></td>
+            </tr>
+          }
+        } @else {
+          @for (client of filteredClients(); track client.id) {
+            <tr class="client-row" (click)="openDetail(client)">
+              <td style="padding:14px 22px">
+                <div style="display:flex;align-items:center;gap:12px">
+                  <app-avatar [name]="client.name" [size]="36" />
+                  <div>
+                    <div style="font-weight:500;font-size:13px">{{ client.name }}</div>
+                    <div style="font-size:11px;color:var(--ink-3);font-family:var(--font-mono)">{{ client.email }}</div>
+                  </div>
+                </div>
+              </td>
+              <td style="padding:14px 8px">
+                @if (client.plan) {
+                  <span class="pill pill-neutral" style="font-size:11px">{{ client.plan }}</span>
+                } @else {
+                  <span style="font-size:12px;color:var(--ink-4)">Sin membresía</span>
+                }
+              </td>
+              <td style="padding:14px 8px">
+                <span class="pill" [ngClass]="getPillClass(client.status)">{{ getStatusLabel(client.status) }}</span>
+              </td>
+              <td style="padding:14px 8px">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <div style="width:60px;height:4px;background:var(--bg-sunk);border-radius:2px;overflow:hidden">
+                    <div style="height:100%;background:var(--accent);border-radius:2px" [style.width.%]="(client.attendanceThisMonth / 30) * 100"></div>
+                  </div>
+                  <span class="mono" style="font-size:11px;color:var(--ink-3)">{{ client.attendanceThisMonth }}</span>
+                </div>
+              </td>
+              <td style="padding:14px 8px" class="mono" style="font-size:12px;color:var(--ink-3)">{{ client.nextPayment }}</td>
+              <td style="padding:14px 8px">
+                @if (client.assignedRoutine) {
+                  <span style="font-size:12px;color:var(--ink-2)">PPL · 5 días</span>
+                } @else {
+                  <span style="font-size:12px;color:var(--ink-4)">Sin asignar</span>
+                }
+              </td>
+              <td style="padding:14px 22px;text-align:right" (click)="$event.stopPropagation()">
+                <div style="display:flex;gap:6px;justify-content:flex-end">
+                  <button class="btn btn-secondary btn-sm" (click)="openDetail(client)">Ver</button>
+                  <button class="btn btn-ghost btn-sm btn-icon">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          }
+
+          @if (filteredClients().length === 0) {
+            <tr>
+              <td colspan="7">
+                <div class="empty-state">
+                  <svg class="empty-icon" width="32" height="32" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3.5" stroke="currentColor" stroke-width="1.5"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                  <div class="empty-title">Sin resultados</div>
+                  <div class="empty-desc">Intenta con otro filtro o término de búsqueda</div>
+                </div>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<!-- Client detail modal -->
+@if (selectedClient()) {
+  <app-client-detail [client]="selectedClient()!" (close)="closeDetail()" />
+}
+
+<!-- Add client modal -->
+@if (showAddModal()) {
+  <div class="modal-overlay" (click)="showAddModal.set(false)">
+    <div class="modal-panel" (click)="$event.stopPropagation()">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:22px">
+        <h2 style="font-size:20px">Nuevo cliente</h2>
+        <button class="btn btn-ghost btn-icon" (click)="showAddModal.set(false)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div class="form-group">
+          <label>Nombre completo</label>
+          <input class="input" placeholder="Cliente Ejemplo" />
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input class="input" type="email" placeholder="correo@email.com" />
+        </div>
+        <div class="form-group">
+          <label>Teléfono</label>
+          <input class="input" placeholder="8800-0000" />
+        </div>
+        <div class="form-group">
+          <label>Plan</label>
+          <select class="input">
+            <option>Mensual</option>
+            <option>Trimestral</option>
+            <option>Semestral</option>
+            <option>Anual</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Fecha de inicio</label>
+          <app-date-input />
+        </div>
+        <div class="form-group">
+          <label>Monto mensual</label>
+          <input class="input" placeholder="₡25.000" />
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:24px;justify-content:flex-end">
+        <button class="btn btn-secondary" (click)="showAddModal.set(false)">Cancelar</button>
+        <button class="btn btn-primary" (click)="showAddModal.set(false)">Crear cliente</button>
+      </div>
+    </div>
+  </div>
+}

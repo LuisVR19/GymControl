@@ -1,0 +1,79 @@
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { HeaderComponent } from '../../core/layout/header/header.component';
+import { AvatarComponent } from '../../shared/components/avatar/avatar.component';
+import { RegisterPaymentModalComponent } from '../../shared/components/register-payment-modal/register-payment-modal.component';
+import { PaymentService } from '../../core/services/payment.service';
+import { ClientService } from '../../core/services/client.service';
+import { PlanService } from '../../core/services/plan.service';
+
+@Component({
+  selector: 'app-payments',
+  standalone: true,
+  imports: [CommonModule, FormsModule, HeaderComponent, AvatarComponent, RegisterPaymentModalComponent],
+  templateUrl: './payments.component.html',
+  styleUrl: './payments.component.scss',
+})
+export class PaymentsComponent implements OnInit {
+  private paymentService = inject(PaymentService);
+  private clientService  = inject(ClientService);
+  private planService    = inject(PlanService);
+
+  readonly loading   = this.paymentService.loading;
+  readonly error     = this.paymentService.error;
+  readonly skeletonRows = Array(6);
+
+  readonly activeTab         = signal<'todos' | 'pendientes' | 'pagados'>('todos');
+  readonly showRegisterModal = signal(false);
+
+  readonly filteredPayments = computed(() => {
+    const tab = this.activeTab();
+    const all = this.paymentService.payments();
+    if (tab === 'pendientes') return all.filter(p => p.status !== 'pagado');
+    if (tab === 'pagados')    return all.filter(p => p.status === 'pagado');
+    return all;
+  });
+
+  readonly totalIncome  = this.paymentService.totalIncome;
+  readonly pendingCount = this.paymentService.pendingCount;
+  readonly pendingTotal = this.paymentService.pendingTotal;
+
+  readonly paidCount = computed(() => this.paymentService.paidPayments().length);
+  readonly collectRateNum = computed(() => {
+    const total = this.paymentService.payments().length;
+    const paid  = this.paymentService.paidPayments().length;
+    return total > 0 ? (paid / total) * 100 : 0;
+  });
+
+  ngOnInit(): void {
+    this.paymentService.loadPayments();
+    this.clientService.loadClients();
+    this.planService.loadPlans();
+  }
+
+  onPaymentRegistered(): void {
+    this.paymentService.loadPayments();
+  }
+
+  retry(): void { this.paymentService.loadPayments(); }
+
+  getPillClass(status: string): string {
+    const map: Record<string, string> = { pagado: 'pill-ok', pendiente: 'pill-warn', vencido: 'pill-danger' };
+    return map[status] ?? 'pill-neutral';
+  }
+
+  exportCSV(): void {
+    const rows   = this.filteredPayments();
+    const header = 'ID,Cliente,Monto,Fecha,Método,Concepto,Estado';
+    const lines  = rows.map(p =>
+      [p.id, p.clientName, p.amount, p.date, p.method, p.concept, p.status].join(',')
+    );
+    const blob = new Blob([[header, ...lines].join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const a    = Object.assign(document.createElement('a'), {
+      href: URL.createObjectURL(blob), download: 'pagos.csv',
+    });
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+}

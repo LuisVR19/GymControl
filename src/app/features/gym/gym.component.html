@@ -1,0 +1,198 @@
+<app-header pageTitle="Mi gym" />
+
+<div class="gym-content">
+
+  <!-- Hero card -->
+  <div class="card hero-card">
+    <div class="hero-banner" [ngStyle]="heroBannerStyle">
+      <div class="hero-actions">
+        <button class="btn-hero-ghost" (click)="editing ? cancel() : startEdit()">
+          {{ editing ? 'Cancelar' : 'Editar' }}
+        </button>
+        @if (editing) {
+          <button class="btn-hero-primary" (click)="save()" [disabled]="saving">
+            {{ saving ? 'Guardando…' : 'Guardar' }}
+          </button>
+        }
+      </div>
+    </div>
+
+    <div class="hero-body">
+      <!-- Logo -->
+      <div class="logo-wrap">
+        <div class="logo-inner" [ngStyle]="{ background: currentColor }">F</div>
+      </div>
+
+      <!-- Name + meta -->
+      <div class="hero-info">
+        @if (editing) {
+          <input class="name-input" [(ngModel)]="draft.name" />
+        } @else {
+          <div class="gym-name">{{ data.name }}</div>
+        }
+        <div class="gym-tagline">{{ data.tagline }}</div>
+        <div class="gym-legal">
+          <span>{{ data.legal }}</span>
+          <span class="sep">·</span>
+          <span>{{ data.taxId }}</span>
+        </div>
+      </div>
+
+      <!-- Color swatches (edit mode only) -->
+      @if (editing) {
+        <div class="color-swatches">
+          @for (c of colors; track c) {
+            <button
+              class="swatch"
+              [style.background]="c"
+              [class.swatch-active]="draft.color === c"
+              (click)="draft.color = c"
+            ></button>
+          }
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- Two-column grid -->
+  <div class="two-col">
+
+    <!-- Left: info + contact + location -->
+    <div class="left-col">
+
+      <!-- Información general -->
+      <div class="card info-card">
+        <div class="card-header">Información general</div>
+
+        <div class="info-row">
+          <span class="row-label">Tagline</span>
+          @if (editing) { <input class="row-input" [(ngModel)]="draft.tagline" /> }
+          @else { <span class="row-value">{{ data.tagline }}</span> }
+        </div>
+        <div class="info-row">
+          <span class="row-label">Razón social</span>
+          @if (editing) { <input class="row-input" [(ngModel)]="draft.legal" /> }
+          @else { <span class="row-value">{{ data.legal }}</span> }
+        </div>
+        <div class="info-row">
+          <span class="row-label">Cédula jur.</span>
+          @if (editing) { <input class="row-input" [(ngModel)]="draft.taxId" /> }
+          @else { <span class="row-value">{{ data.taxId }}</span> }
+        </div>
+        <div class="info-row">
+          <span class="row-label">Capacidad</span>
+          @if (editing) { <input class="row-input" type="number" [(ngModel)]="draft.capacity" /> }
+          @else { <span class="row-value">{{ data.capacity }} <span class="row-suffix">personas</span></span> }
+        </div>
+        <div class="info-row no-border">
+          <span class="row-label">Área</span>
+          @if (editing) { <input class="row-input" type="number" [(ngModel)]="draft.sqm" /> }
+          @else { <span class="row-value">{{ data.sqm }} <span class="row-suffix">m²</span></span> }
+        </div>
+      </div>
+
+      <!-- Contacto -->
+      <div class="card info-card">
+        <div class="card-header">Contacto</div>
+
+        <div class="info-row">
+          <span class="row-label">Correo</span>
+          @if (editing) { <input class="row-input" type="email" [(ngModel)]="draft.email" /> }
+          @else { <span class="row-value">{{ data.email }}</span> }
+        </div>
+        <div class="info-row">
+          <span class="row-label">Teléfono</span>
+          @if (editing) { <input class="row-input" type="tel" [(ngModel)]="draft.phone" /> }
+          @else { <span class="row-value">{{ data.phone }}</span> }
+        </div>
+        <div class="info-row">
+          <span class="row-label">WhatsApp</span>
+          @if (editing) { <input class="row-input" type="tel" [(ngModel)]="draft.whatsapp" /> }
+          @else { <span class="row-value">{{ data.whatsapp }}</span> }
+        </div>
+        <div class="info-row no-border">
+          <span class="row-label">Instagram</span>
+          @if (editing) { <input class="row-input" [(ngModel)]="draft.instagram" /> }
+          @else { <span class="row-value">{{ data.instagram }}</span> }
+        </div>
+      </div>
+
+      <!-- Ubicación -->
+      <div class="card info-card">
+        <div class="card-header">Ubicación</div>
+
+        <div class="info-row">
+          <span class="row-label">Dirección</span>
+          @if (editing) { <input class="row-input" [(ngModel)]="draft.address" /> }
+          @else { <span class="row-value">{{ data.address }}</span> }
+        </div>
+        <div class="info-row">
+          <span class="row-label">Ciudad</span>
+          @if (editing) { <input class="row-input" [(ngModel)]="draft.city" /> }
+          @else { <span class="row-value">{{ data.city }}</span> }
+        </div>
+        <div class="info-row no-border">
+          <span class="row-label">Provincia</span>
+          @if (editing) { <input class="row-input" [(ngModel)]="draft.province" /> }
+          @else { <span class="row-value">{{ data.province }}</span> }
+        </div>
+
+        <!-- Map placeholder -->
+        <div class="map-placeholder">
+          <div class="map-marker" [ngStyle]="markerStyle"></div>
+          <div class="map-badge">VISTA PREVIA · MAPA</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: horarios -->
+    <div class="right-col">
+      <div class="card info-card hours-card">
+        <div class="card-header hours-header">
+          <span>Horarios</span>
+          <span class="hours-tz">HORA LOCAL · CR</span>
+        </div>
+
+        @for (entry of dayEntries; track entry.day.id) {
+          <div class="hours-row" [class.hours-closed]="entry.h.closed">
+            <span class="day-label">{{ entry.day.label }}</span>
+
+            @if (editing) {
+              <div class="time-inputs">
+                <input
+                  type="time"
+                  class="time-input"
+                  [disabled]="entry.h.closed"
+                  [(ngModel)]="hours[entry.day.id].open"
+                />
+                <span class="time-dash">—</span>
+                <input
+                  type="time"
+                  class="time-input"
+                  [disabled]="entry.h.closed"
+                  [(ngModel)]="hours[entry.day.id].close"
+                />
+              </div>
+            } @else {
+              <span class="time-value">
+                {{ entry.h.closed ? 'Cerrado' : entry.h.open + ' – ' + entry.h.close }}
+              </span>
+            }
+
+            @if (editing) {
+              <button
+                class="closed-toggle"
+                [class.is-open]="!entry.h.closed"
+                (click)="toggleDayClosed(entry.day.id)"
+              >{{ entry.h.closed ? 'CERRADO' : 'ABIERTO' }}</button>
+            } @else {
+              <span class="day-dot" [class.dot-open]="!entry.h.closed"></span>
+            }
+          </div>
+        }
+
+        <div class="holidays-note">FERIADOS · cerrado 1 ene, 1 may, 25 dic</div>
+      </div>
+    </div>
+  </div>
+</div>

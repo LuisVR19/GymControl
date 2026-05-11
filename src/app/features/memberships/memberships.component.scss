@@ -1,0 +1,290 @@
+.content {
+  padding: 28px 32px;
+}
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.kpi-val {
+  font-size: 30px;
+  letter-spacing: -0.8px;
+  margin-top: 6px;
+}
+
+.kpi-sub {
+  font-size: 12px;
+  color: var(--ink-3);
+  margin-top: 4px;
+}
+
+.catalog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+/* ── Plan grid ───────────────────────────────── */
+.plans-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+.plan-card {
+  background: var(--bg-elev);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.15s;
+
+  &:hover { box-shadow: var(--shadow-md); }
+  &.inactive { opacity: 0.55; }
+}
+
+.plan-stripe {
+  height: 6px;
+  flex-shrink: 0;
+}
+
+.plan-body {
+  padding: 18px 20px 14px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.plan-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.plan-name {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.3px;
+}
+
+.plan-price { margin-top: 8px; }
+
+.plan-duration {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  color: var(--ink-3);
+  margin-top: 2px;
+}
+
+.plan-stats {
+  display: flex;
+  gap: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line-2);
+}
+
+.plan-access {
+  font-size: 13px;
+  color: var(--ink-2);
+  margin-top: 4px;
+}
+
+.plan-features {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.plan-feature {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--ink-2);
+
+  svg { color: var(--ink-3); flex-shrink: 0; }
+  span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
+
+.plan-feature-more {
+  font-size: 11px;
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  padding-left: 20px;
+}
+
+.plan-footer {
+  padding: 10px 14px;
+  border-top: 1px solid var(--line);
+  background: var(--bg-sunk);
+  display: flex;
+  gap: 6px;
+}
+
+/* ── Add card ────────────────────────────────── */
+.plan-add-card {
+  min-height: 320px;
+  border: 1.5px dashed var(--line);
+  border-radius: var(--radius-lg);
+  background: transparent;
+  cursor: pointer;
+  color: var(--ink-3);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-family: var(--font-ui);
+  transition: border-color 0.15s, background 0.15s;
+
+  &:hover {
+    border-color: var(--ink-4);
+    background: var(--bg-sunk);
+    color: var(--ink-2);
+  }
+}
+
+.plan-add-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: var(--bg-sunk);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-2);
+}
+
+.plan-add-label {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.plan-add-sub {
+  font-size: 11px;
+  color: var(--ink-4);
+  max-width: 160px;
+  text-align: center;
+}
+
+/* ── Modal body ──────────────────────────────── */
+.modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  max-height: 60vh;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 20px;
+  margin-top: 20px;
+  border-top: 1px solid var(--line);
+  background: var(--bg-sunk);
+  padding: 16px 0 0;
+  gap: 12px;
+}
+
+/* ── Access type cards ───────────────────────── */
+.access-card {
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  background: var(--bg-elev);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.12s, background 0.12s;
+  color: var(--ink);
+
+  &.active {
+    border: 2px solid var(--ink);
+    background: var(--bg-sunk);
+    margin: -1px;
+  }
+}
+
+/* ── Color swatches ──────────────────────────── */
+.color-swatch {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.1s;
+
+  &.selected {
+    border: 2.5px solid var(--ink);
+    transform: scale(1.1);
+  }
+}
+
+/* ── Toggle button ───────────────────────────── */
+.toggle-btn {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  background: var(--bg-sunk);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+  font-family: var(--font-ui);
+}
+
+.toggle-track {
+  width: 36px;
+  height: 20px;
+  border-radius: 20px;
+  padding: 2px;
+  background: var(--ink-4);
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  transition: background 0.2s, justify-content 0.2s;
+
+  &.on {
+    background: var(--accent);
+    justify-content: flex-end;
+  }
+}
+
+.toggle-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: white;
+}
+
+/* ── Input prefix ────────────────────────────── */
+.input-prefix-wrap {
+  position: relative;
+
+  .input-prefix {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: var(--font-mono);
+    color: var(--ink-3);
+    font-size: 14px;
+    pointer-events: none;
+  }
+}

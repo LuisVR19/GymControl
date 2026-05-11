@@ -1,0 +1,258 @@
+<app-header pageTitle="Membresías" [pageSubtitle]="plans().length + ' planes'" />
+
+<div class="content">
+
+  <!-- Error banner -->
+  @if (error()) {
+    <div class="error-banner">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5"/><path d="M12 8v4M12 16h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      {{ error() }}
+      <button (click)="retry()">Reintentar</button>
+    </div>
+  }
+
+  <!-- KPI Cards -->
+  <div class="kpi-grid">
+    @if (loading()) {
+      @for (_ of skeletonCards; track $index) {
+        <div class="card">
+          <span class="skeleton skeleton-text" style="width:80px;margin-bottom:10px"></span>
+          <span class="skeleton skeleton-num"></span>
+          <span class="skeleton skeleton-text" style="width:60%;margin-top:8px"></span>
+        </div>
+      }
+    } @else {
+      <div class="card">
+        <div class="label-mono">Planes activos</div>
+        <div class="display-num kpi-val">{{ activePlanCount() }}</div>
+        <div class="kpi-sub">de {{ plans().length }} totales</div>
+      </div>
+      <div class="card">
+        <div class="label-mono">Suscripciones</div>
+        <div class="display-num kpi-val">{{ totalSubs() }}</div>
+        <div class="kpi-sub">clientes con plan</div>
+      </div>
+      <div class="card">
+        <div class="label-mono">Ingreso recurrente</div>
+        <div class="display-num kpi-val">₡{{ (monthlyRevenue() / 1000).toFixed(0) }}K</div>
+        <div class="kpi-sub">mensualizado</div>
+      </div>
+      <div class="card">
+        <div class="label-mono">Plan más vendido</div>
+        <div class="display-num kpi-val" style="font-size:20px;line-height:1.2">{{ topPlan().name }}</div>
+        <div class="kpi-sub">{{ topPlan().count }} clientes · {{ topPlan().pct }}%</div>
+      </div>
+    }
+  </div>
+
+  <!-- Catalog header -->
+  <div class="catalog-header">
+    <div>
+      <div class="label-mono">Catálogo de planes</div>
+      <div class="display-num" style="font-size:18px;margin-top:2px">{{ plans().length }} membresías</div>
+    </div>
+    <button class="btn btn-primary" (click)="openCreate()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      Nueva membresía
+    </button>
+  </div>
+
+  <!-- Plans grid -->
+  <div class="plans-grid">
+    @for (plan of plans(); track plan.id) {
+      <div class="plan-card" [class.inactive]="!plan.isActive">
+        <!-- color stripe -->
+        <div class="plan-stripe" [style.background]="colorValue(plan.color)"></div>
+
+        <div class="plan-body">
+          <div class="plan-top">
+            <div>
+              <div class="plan-name">{{ plan.name }}</div>
+              <div class="plan-price">
+                <span class="display-num" style="font-size:30px;letter-spacing:-1px">₡{{ plan.price.toLocaleString('es-CR') }}</span>
+              </div>
+              <div class="plan-duration">POR {{ durationLabel(plan.durationDays).toUpperCase() }}</div>
+            </div>
+            <span class="pill" [ngClass]="plan.isActive ? 'pill-ok' : 'pill-neutral'">
+              {{ plan.isActive ? 'Activo' : 'Oculto' }}
+            </span>
+          </div>
+
+          <div class="plan-stats">
+            <div>
+              <div class="label-mono">Suscriptores</div>
+              <div class="display-num" style="font-size:20px;margin-top:2px">{{ plan.subscriberCount }}</div>
+            </div>
+            <div>
+              <div class="label-mono">Acceso</div>
+              <div class="plan-access">{{ plan.accessType === 'unlimited' ? 'Ilimitado' : plan.maxVisits + ' visitas' }}</div>
+            </div>
+          </div>
+
+          <div class="plan-features">
+            @for (f of plan.features.slice(0, 3); track $index) {
+              <div class="plan-feature">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5 9-9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <span>{{ f }}</span>
+              </div>
+            }
+            @if (plan.features.length > 3) {
+              <div class="plan-feature-more">+ {{ plan.features.length - 3 }} más</div>
+            }
+          </div>
+        </div>
+
+        <div class="plan-footer">
+          <button class="btn btn-secondary btn-sm" style="flex:1" (click)="openEdit(plan)">Editar</button>
+          <button class="btn btn-secondary btn-sm" style="flex:1" (click)="duplicate(plan, $event)" [disabled]="submitting()">Duplicar</button>
+          <button class="btn btn-ghost btn-sm btn-icon" (click)="openEdit(plan)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
+          </button>
+        </div>
+      </div>
+    }
+
+    <!-- Add card -->
+    <button class="plan-add-card" (click)="openCreate()">
+      <div class="plan-add-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </div>
+      <div class="plan-add-label">Nueva membresía</div>
+      <div class="plan-add-sub">Crea un plan: precio, duración y beneficios</div>
+    </button>
+  </div>
+
+</div>
+
+<!-- Create / Edit Modal -->
+@if (showModal()) {
+  <div class="modal-overlay" (click)="closeModal()">
+    <div class="modal-panel" (click)="$event.stopPropagation()" style="max-width:600px">
+
+      <!-- Header -->
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px">
+        <div>
+          <div class="label-mono">{{ isEditMode() ? 'Editar' : 'Nueva' }}</div>
+          <h2 style="font-size:22px;margin-top:2px">{{ isEditMode() ? 'Editar membresía' : 'Nueva membresía' }}</h2>
+        </div>
+        <button class="btn btn-ghost btn-icon" (click)="closeModal()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+
+      <!-- Body -->
+      <div class="modal-body">
+
+        <!-- Nombre -->
+        <div class="form-group">
+          <label>Nombre del plan</label>
+          <input class="input" [(ngModel)]="form.name" placeholder="Ej. Plan Mensual Pro" name="plan_name" />
+        </div>
+
+        <!-- Precio + Duración -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="form-group">
+            <label>Precio</label>
+            <div class="input-prefix-wrap">
+              <span class="input-prefix">₡</span>
+              <input class="input" type="number" [(ngModel)]="form.price" name="plan_price" style="padding-left:36px" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Duración</label>
+            <div style="display:flex;gap:8px">
+              <input class="input" type="number" [(ngModel)]="form.duration" name="plan_duration" style="width:80px" min="1" />
+              <select class="input" [(ngModel)]="form.unit" name="plan_unit">
+                @for (u of unitOptions; track u) {
+                  <option [value]="u">{{ u }}(s)</option>
+                }
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tipo de acceso -->
+        <div class="form-group">
+          <label>Tipo de acceso</label>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <button type="button" class="access-card" [class.active]="form.accessType === 'unlimited'" (click)="form.accessType = 'unlimited'">
+              <div style="font-weight:600;font-size:13px">Ilimitado</div>
+              <div style="font-size:11px;color:var(--ink-3);margin-top:3px">Acceso libre al gym</div>
+            </button>
+            <button type="button" class="access-card" [class.active]="form.accessType === 'limited'" (click)="form.accessType = 'limited'">
+              <div style="font-weight:600;font-size:13px">Por clases</div>
+              <div style="font-size:11px;color:var(--ink-3);margin-top:3px">X visitas / período</div>
+            </button>
+          </div>
+          @if (form.accessType === 'limited') {
+            <div style="display:flex;align-items:center;gap:10px;margin-top:8px">
+              <input class="input" type="number" [(ngModel)]="form.maxVisits" name="plan_visits" style="width:90px" min="1" />
+              <span style="font-size:13px;color:var(--ink-3)">visitas durante el período</span>
+            </div>
+          }
+        </div>
+
+        <!-- Beneficios -->
+        <div class="form-group">
+          <label>Beneficios incluidos</label>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            @for (f of form.features; track trackByIndex($index); let i = $index) {
+              <div style="display:flex;gap:8px;align-items:center">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="flex-shrink:0;color:var(--ink-3)"><path d="M5 12l5 5 9-9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <input class="input" [(ngModel)]="form.features[i]" [name]="'feature_' + i" placeholder="Ej. Acceso ilimitado" style="flex:1" />
+                <button type="button" class="btn btn-ghost btn-icon btn-sm" (click)="removeFeature(i)">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+                </button>
+              </div>
+            }
+            <button type="button" class="btn btn-ghost btn-sm" style="border:1px dashed var(--line);justify-content:center;margin-top:2px" (click)="addFeature()">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+              Añadir beneficio
+            </button>
+          </div>
+        </div>
+
+        <!-- Color + Estado -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="form-group">
+            <label>Color</label>
+            <div style="display:flex;gap:8px;margin-top:2px">
+              @for (c of colorOptions; track c.id) {
+                <button type="button" class="color-swatch" [style.background]="c.value"
+                  [class.selected]="form.color === c.id" (click)="form.color = c.id">
+                </button>
+              }
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Estado</label>
+            <button type="button" class="toggle-btn" [class.on]="form.isActive" (click)="form.isActive = !form.isActive">
+              <span>{{ form.isActive ? 'Plan activo' : 'Plan oculto' }}</span>
+              <div class="toggle-track" [class.on]="form.isActive">
+                <div class="toggle-thumb"></div>
+              </div>
+            </button>
+          </div>
+        </div>
+
+      </div><!-- /modal-body -->
+
+      <!-- Footer -->
+      <div class="modal-footer">
+        <div>
+          @if (isEditMode()) {
+            <button class="btn btn-danger btn-sm" (click)="confirmDelete()" [disabled]="submitting()">Eliminar plan</button>
+          }
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-secondary" (click)="closeModal()">Cancelar</button>
+          <button class="btn btn-accent" (click)="savePlan()" [disabled]="submitting() || !form.name.trim()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5 9-9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            {{ isEditMode() ? 'Guardar cambios' : 'Crear plan' }}
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+}

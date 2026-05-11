@@ -1,0 +1,298 @@
+<app-header pageTitle="Rutinas" [pageSubtitle]="routineService.routines().length + ' programas'" />
+
+<div class="routines-shell">
+
+  <!-- Left: routines list -->
+  <div class="routines-sidebar">
+    <div class="routines-sidebar-header">
+      <div class="label-mono">Programas</div>
+      <button class="btn btn-primary btn-sm" (click)="showNewRoutineModal.set(true)">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        Nuevo
+      </button>
+    </div>
+
+    <div class="routine-list">
+      @if (loading()) {
+        @for (_ of [1,2,3]; track $index) {
+          <div class="routine-card" style="pointer-events:none">
+            <span class="skeleton skeleton-text" style="width:70%;margin-bottom:8px"></span>
+            <span class="skeleton skeleton-text" style="width:50%"></span>
+          </div>
+        }
+      } @else if (error()) {
+        <div style="padding:16px;font-size:12px;color:var(--danger)">
+          Error al cargar.
+          <button class="btn btn-ghost btn-sm" style="display:block;margin-top:6px;padding:0;color:var(--danger);text-decoration:underline" (click)="retry()">Reintentar</button>
+        </div>
+      } @else if (routineService.routines().length === 0) {
+        <div class="empty-state" style="padding:32px 16px">
+          <svg class="empty-icon" width="28" height="28" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="3" stroke="currentColor" stroke-width="1.5"/><path d="M8 12h8M12 8v8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <div class="empty-title" style="font-size:13px">Sin rutinas</div>
+          <div class="empty-desc" style="font-size:12px">Crea tu primer programa</div>
+        </div>
+      } @else {
+        @for (r of routineService.routines(); track r.id) {
+          <button class="routine-card" [class.active]="selectedRoutine()?.id === r.id" (click)="selectRoutine(r)">
+            <div style="font-weight:600;font-size:13px;margin-bottom:4px">{{ r.name }}</div>
+            <div class="mono" style="font-size:10px;color:var(--ink-3)">{{ r.days.length }} días · {{ totalExercises(r) }} ejercicios</div>
+            <div style="margin-top:8px;display:flex;align-items:center;gap:4px">
+              @if (r.assignedTo && r.assignedTo.length > 0) {
+                <div style="display:flex">
+                  @for (cid of r.assignedTo.slice(0,3); track cid) {
+                    <app-avatar [name]="'C'+$index" [size]="20" style="margin-left:-4px" />
+                  }
+                </div>
+                <span style="font-size:11px;color:var(--ink-3)">{{ r.assignedTo.length }} clientes</span>
+              } @else {
+                <span style="font-size:11px;color:var(--ink-4)">Sin asignar</span>
+              }
+            </div>
+          </button>
+        }
+      }
+    </div>
+  </div>
+
+  <!-- Right: routine editor -->
+  @if (!selectedRoutine() && !loading()) {
+    <div class="routine-editor" style="display:flex;align-items:center;justify-content:center">
+      <div class="empty-state">
+        <svg class="empty-icon" width="36" height="36" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="3" stroke="currentColor" stroke-width="1.5"/><path d="M8 12h8M12 8v8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <div class="empty-title">Selecciona o crea una rutina</div>
+        <div class="empty-desc">Los programas de entrenamiento aparecerán aquí</div>
+        <button class="btn btn-primary btn-sm" style="margin-top:8px" (click)="showNewRoutineModal.set(true)">Nueva rutina</button>
+      </div>
+    </div>
+  }
+  @if (selectedRoutine()) {
+    <div class="routine-editor">
+
+      <!-- Editor header -->
+      <div class="editor-header">
+        <div>
+          @if (editMode()) {
+            <input class="input" style="font-family:var(--font-display);font-size:20px;font-weight:600;width:320px" [(ngModel)]="selectedRoutine()!.name" />
+          } @else {
+            <h2 style="font-size:20px">{{ selectedRoutine()!.name }}</h2>
+          }
+          <div style="font-size:12px;color:var(--ink-3);margin-top:4px">
+            {{ selectedRoutine()!.days.length }} días · {{ totalExercises(selectedRoutine()!) }} ejercicios · {{ totalSets(selectedRoutine()!) }} series
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="btn btn-secondary btn-sm" (click)="openAssignModal()">Asignar clientes</button>
+          @if (editMode()) {
+            <button class="btn btn-accent" (click)="editMode.set(false)">Guardar</button>
+          } @else {
+            <button class="btn btn-secondary" (click)="editMode.set(true)">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.1 2.1 0 113 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Editar
+            </button>
+          }
+          <button class="btn btn-danger btn-sm btn-icon" (click)="deleteRoutine(selectedRoutine()!.id)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Day tabs -->
+      <div class="day-tabs">
+        @for (day of selectedRoutine()!.days; track $index) {
+          <button class="day-tab" [class.active]="activeDay() === $index" (click)="activeDay.set($index)">
+            {{ 'D' + ($index + 1) }}
+          </button>
+        }
+        @if (editMode()) {
+          <button class="day-tab day-tab-add" (click)="selectedRoutine()!.days.push({ day:'Día '+(selectedRoutine()!.days.length+1), exercises:[] })">+</button>
+        }
+      </div>
+
+      <!-- Day content -->
+      @if (selectedRoutine()!.days[activeDay()]) {
+        <div class="day-content">
+          <div class="day-label">
+            @if (editMode()) {
+              <input class="input" [(ngModel)]="selectedRoutine()!.days[activeDay()].day" style="font-weight:600;font-size:14px" />
+            } @else {
+              <div style="font-weight:600;font-size:14px">{{ selectedRoutine()!.days[activeDay()].day }}</div>
+            }
+          </div>
+
+          <!-- Exercise table -->
+          <table class="table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Ejercicio</th>
+                <th>Series</th>
+                <th>Reps</th>
+                <th>Descanso</th>
+                @if (editMode()) { <th></th> }
+              </tr>
+            </thead>
+            <tbody>
+              @for (ex of selectedRoutine()!.days[activeDay()].exercises; track ex.id; let i = $index) {
+                <tr>
+                  <td class="mono" style="color:var(--ink-4);font-size:12px">{{ i + 1 }}</td>
+                  <td>
+                    @if (editMode()) {
+                      <input class="input" [(ngModel)]="ex.name" style="width:100%;min-width:180px" />
+                    } @else {
+                      <span style="font-weight:500">{{ ex.name }}</span>
+                    }
+                  </td>
+                  <td>
+                    @if (editMode()) {
+                      <input class="input" [(ngModel)]="ex.sets" type="number" style="width:70px" />
+                    } @else {
+                      <span class="mono">{{ ex.sets }}</span>
+                    }
+                  </td>
+                  <td>
+                    @if (editMode()) {
+                      <input class="input" [(ngModel)]="ex.reps" style="width:80px" />
+                    } @else {
+                      <span class="mono">{{ ex.reps }}</span>
+                    }
+                  </td>
+                  <td>
+                    @if (editMode()) {
+                      <input class="input" [(ngModel)]="ex.rest" style="width:70px" />
+                    } @else {
+                      <span class="mono" style="color:var(--ink-3)">{{ ex.rest }}</span>
+                    }
+                  </td>
+                  @if (editMode()) {
+                    <td style="text-align:right">
+                      <button class="btn btn-ghost btn-sm btn-icon" (click)="removeExercise(selectedRoutine()!.days[activeDay()], i)">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+                      </button>
+                    </td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+
+          @if (editMode()) {
+            <div style="margin-top:12px">
+              <div style="display:flex;gap:8px">
+                <button class="btn btn-secondary" (click)="addExercise(selectedRoutine()!.days[activeDay()])">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                  Nuevo ejercicio
+                </button>
+                <button class="btn btn-secondary" [class.active]="showExercisePicker()" (click)="showExercisePicker.set(!showExercisePicker()); exercisePickerQuery.set('')">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h10M4 18h7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+                  Desde biblioteca
+                </button>
+              </div>
+
+              @if (showExercisePicker()) {
+                <div class="exercise-picker">
+                  <div class="search-box" style="padding:10px 12px;border-bottom:1px solid var(--line)">
+                    <span class="search-icon">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.6"/><path d="M16 16l5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+                    </span>
+                    <input class="input" style="padding-left:30px;border:none;background:transparent;font-size:13px" placeholder="Buscar ejercicio..." [value]="exercisePickerQuery()" (input)="exercisePickerQuery.set($any($event.target).value)" />
+                  </div>
+                  <div class="picker-list">
+                    @if (exerciseService.loading()) {
+                      <div style="padding:16px;font-size:13px;color:var(--ink-3)">Cargando...</div>
+                    } @else if (filteredLibrary().length === 0) {
+                      <div style="padding:16px;font-size:13px;color:var(--ink-4)">Sin resultados</div>
+                    } @else {
+                      @for (ex of filteredLibrary(); track ex.id) {
+                        <button class="picker-item" (click)="addFromLibrary(ex, selectedRoutine()!.days[activeDay()])">
+                          <span style="font-size:13px;font-weight:500">{{ ex.name }}</span>
+                          @if (ex.muscleGroup) {
+                            <span class="muscle-tag">{{ ex.muscleGroup }}</span>
+                          }
+                        </button>
+                      }
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      }
+
+      <!-- Assigned clients -->
+      <div class="assigned-section">
+        <div class="label-mono" style="margin-bottom:12px">Clientes asignados</div>
+        @if (getAssignedClients(selectedRoutine()!).length) {
+          <div style="display:flex;flex-wrap:wrap;gap:8px">
+            @for (c of getAssignedClients(selectedRoutine()!); track c.id) {
+              <div style="display:flex;align-items:center;gap:8px;padding:6px 12px;background:var(--bg-sunk);border-radius:99px;font-size:12px">
+                <app-avatar [name]="c.name" [size]="22" />
+                {{ c.name }}
+              </div>
+            }
+          </div>
+        } @else {
+          <div style="font-size:13px;color:var(--ink-4)">Sin clientes asignados</div>
+        }
+      </div>
+
+    </div>
+  }
+
+</div>
+
+<!-- Assign modal -->
+@if (showAssignModal()) {
+  <div class="modal-overlay" (click)="showAssignModal.set(false)">
+    <div class="modal-panel" (click)="$event.stopPropagation()">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+        <h3>Asignar clientes</h3>
+        <button class="btn btn-ghost btn-icon" (click)="showAssignModal.set(false)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <div class="assign-list">
+        @for (client of clientService.clients(); track client.id) {
+          <label class="assign-row">
+            <input type="checkbox" [checked]="pendingAssignments().has(client.id)" (change)="togglePending(client.id)" style="accent-color:var(--ink)" />
+            <app-avatar [name]="client.name" [size]="28" />
+            <div style="flex:1">
+              <div style="font-size:13px;font-weight:500">{{ client.name }}</div>
+              <div style="font-size:11px;color:var(--ink-3)">{{ client.plan }}</div>
+            </div>
+            <span class="pill pill-neutral" style="font-size:9px">{{ client.status }}</span>
+          </label>
+        }
+      </div>
+      <div style="display:flex;gap:8px;margin-top:20px;justify-content:flex-end">
+        <button class="btn btn-secondary" (click)="showAssignModal.set(false)">Cancelar</button>
+        <button class="btn btn-primary" [disabled]="submitting()" (click)="saveAssignments()">
+          {{ submitting() ? 'Guardando...' : 'Guardar asignación' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- New routine modal -->
+@if (showNewRoutineModal()) {
+  <div class="modal-overlay" (click)="showNewRoutineModal.set(false)">
+    <div class="modal-panel" (click)="$event.stopPropagation()">
+      <h3 style="margin-bottom:18px">Nueva rutina</h3>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="form-group">
+          <label>Nombre</label>
+          <input class="input" [(ngModel)]="newRoutineName" placeholder="Push / Pull / Legs..." />
+        </div>
+        <div class="form-group">
+          <label>Descripción</label>
+          <textarea class="input" [(ngModel)]="newRoutineDesc" rows="3" placeholder="Descripción del programa..."></textarea>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:20px;justify-content:flex-end">
+        <button class="btn btn-secondary" (click)="showNewRoutineModal.set(false)">Cancelar</button>
+        <button class="btn btn-primary" (click)="createRoutine()">Crear rutina</button>
+      </div>
+    </div>
+  </div>
+}

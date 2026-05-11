@@ -1,0 +1,35 @@
+<aside class="sidebar">
+  <!-- Brand -->
+  <div class="brand">
+    <div class="brand-mark">F</div>
+    <div>
+      <div class="brand-name">Forja</div>
+      <div class="brand-sub">{{ gymService.gym()?.name ?? '' }}</div>
+    </div>
+  </div>
+
+  <!-- Nav items -->
+  <nav class="nav">
+    @for (item of navItems; track item.id) {
+      <a [routerLink]="item.route" class="nav-item" [class.active]="isActive(item.route)">
+        <span class="nav-icon" [innerHTML]="getIcon(item.icon)"></span>
+        {{ item.label }}
+      </a>
+    }
+  </nav>
+
+  <div class="spacer"></div>
+
+  <!-- Attendance mini widget -->
+  <div class="attendance-widget">
+    <div class="label-mono">Asistencia hoy</div>
+    <div class="attendance-num">
+      @if (attendanceLoading()) {
+        <span class="skeleton" style="width:44px;height:28px;display:inline-block;border-radius:4px"></span>
+      } @else {
+        <span class="display-num" style="font-size:24px">{{ todayAttendance() }}</span>
+        <span style="font-size:11px;color:var(--ink-3);margin-left:6px">check-ins</span>
+      }
+    </div>
+  </div>
+</aside>

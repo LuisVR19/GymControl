@@ -1,0 +1,145 @@
+<app-header pageTitle="Dashboard" [pageSubtitle]="pageSubtitle()" />
+
+<div class="content">
+
+  <!-- KPI Grid -->
+  <div class="kpi-grid">
+    @if (loading()) {
+      @for (_ of skeletonKpis; track $index) {
+        <div class="card kpi-card skeleton-kpi">
+          <span class="skeleton skeleton-text" style="width:80px;margin-bottom:10px"></span>
+          <span class="skeleton skeleton-num"></span>
+          <span class="skeleton skeleton-pill" style="margin-top:12px"></span>
+        </div>
+      }
+    } @else {
+      @for (kpi of kpis(); track kpi.label) {
+        <div class="card kpi-card">
+          <div class="label-mono">{{ kpi.label }}</div>
+          <div class="kpi-body">
+            <div class="display-num kpi-value">{{ kpi.value }}</div>
+            @if (kpi.sparkData) {
+              <app-sparkline [data]="kpi.sparkData" [width]="80" [height]="28"
+                [color]="kpi.deltaType === 'ok' ? 'var(--accent)' : 'var(--ink-3)'" [fill]="true" />
+            }
+          </div>
+          <span class="pill" [ngClass]="getPillClass(kpi.deltaType)" style="margin-top:10px">{{ kpi.delta }}</span>
+        </div>
+      }
+    }
+  </div>
+
+  <!-- Income chart + activity -->
+  <div class="grid-2col" style="margin-bottom:16px">
+
+    <div class="card">
+      <div class="chart-header">
+        <div>
+          <div class="label-mono">Ingresos por mes</div>
+          <div class="display-num" style="font-size:22px;margin-top:4px">{{ accumulatedLabel() }}</div>
+        </div>
+        <div class="range-tabs">
+          @for (tab of ['Mes','Trimestre','Año']; track tab) {
+            <button class="btn btn-secondary btn-sm" [class.active]="activeChartRange === tab" (click)="activeChartRange = tab">{{ tab }}</button>
+          }
+        </div>
+      </div>
+      <app-bar-chart [data]="incomeData()" [labels]="incomeLabels" [height]="180" [color]="'var(--ink)'" style="display:block;width:100%" />
+    </div>
+
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <div class="label-mono">Actividad reciente</div>
+        <button class="btn btn-ghost btn-sm" routerLink="/clients">Ver todo</button>
+      </div>
+      <div class="activity-list">
+        @for (item of activity(); track $index) {
+          <div class="activity-item">
+            <div class="activity-dot" [style.background]="getActivityDot(item.type)"></div>
+            <div class="activity-text">
+              <strong>{{ item.who }}</strong> <span style="color:var(--ink-3)">{{ item.action }}</span>
+            </div>
+            <div class="mono activity-time">{{ item.time }}</div>
+          </div>
+        }
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Pending payments + notifications -->
+  <div class="grid-2col">
+
+    <div class="card">
+      <div class="pending-header">
+        <div>
+          <div class="label-mono">Pagos pendientes</div>
+          <div class="display-num" style="font-size:18px;margin-top:2px">{{ pendingCount() }} clientes · ₡{{ pendingTotal().toLocaleString('es-CR') }}</div>
+        </div>
+        <button class="btn btn-primary">Recordar a todos</button>
+      </div>
+
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Cliente</th>
+            <th>Vencimiento</th>
+            <th>Monto</th>
+            <th>Días</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (c of overdueList(); track c.id) {
+            <tr>
+              <td>
+                <div style="display:flex;align-items:center;gap:10px">
+                  <app-avatar [name]="c.name" [size]="28" />
+                  {{ c.name }}
+                </div>
+              </td>
+              <td class="mono" style="color:var(--ink-3);font-size:12px">{{ c.nextPayment }}</td>
+              <td class="mono">₡{{ (c.monthlyFee ?? 0).toLocaleString('es-CR') }}</td>
+              <td>
+                <span class="pill" [ngClass]="daysLate(c.nextPayment) > 14 ? 'pill-danger' : 'pill-warn'">
+                  {{ daysLate(c.nextPayment) }}d
+                </span>
+              </td>
+              <td style="text-align:right">
+                <button class="btn btn-secondary btn-sm">Recordar</button>
+              </td>
+            </tr>
+          }
+          @if (overdueList().length === 0) {
+            <tr>
+              <td colspan="5" style="text-align:center;padding:24px;color:var(--ink-4);font-size:13px">Sin clientes morosos</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <div class="label-mono">Notificación masiva</div>
+      <div class="display-num" style="font-size:16px;margin-top:4px;margin-bottom:16px">Avisar a tus clientes</div>
+
+      <div class="audience-list">
+        @for (opt of audienceOptions; track opt.value) {
+          <label class="audience-option">
+            <input type="radio" name="audience" [value]="opt.value" [(ngModel)]="notificationAudience" style="accent-color:var(--ink)" />
+            {{ opt.label }}
+          </label>
+        }
+      </div>
+
+      <textarea class="input" rows="3" placeholder="Tu mensaje..." [(ngModel)]="notificationMessage" style="margin-top:12px"></textarea>
+
+      <button class="btn btn-primary btn-full" style="margin-top:12px" (click)="sendNotification()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M3 12L21 4l-4 18-4-7-7-3z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+        Enviar notificación
+      </button>
+    </div>
+
+  </div>
+
+</div>

@@ -1,0 +1,140 @@
+<div class="modal-overlay" (click)="closed.emit()">
+  <div class="modal-panel" (click)="$event.stopPropagation()" style="max-width:520px">
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:22px">
+      <div>
+        <h2 style="font-size:20px">Registrar pago</h2>
+        @if (preselectedClient()) {
+          <div style="font-size:12px;color:var(--ink-3);margin-top:3px">{{ preselectedClient()!.name }}</div>
+        }
+      </div>
+      <button class="btn btn-ghost btn-icon" (click)="closed.emit()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:16px">
+
+      <!-- Client selector — hidden when pre-selected -->
+      @if (!preselectedClient()) {
+        <div class="form-group">
+          <label>Cliente</label>
+          <select class="input" [(ngModel)]="form.clientId" (change)="onClientChange()">
+            <option value="">Seleccionar cliente...</option>
+            @for (c of clientService.clients(); track c.id) {
+              <option [value]="c.id">{{ c.name }}</option>
+            }
+          </select>
+        </div>
+      }
+
+      <!-- Membresía activa + concepto -->
+      @if (selectedClient()) {
+        @if (clientHasPlan()) {
+          <div>
+            <div class="label-mono" style="margin-bottom:10px">Concepto de pago</div>
+            <div class="concept-grid">
+
+              <button class="concept-card" [class.active]="payMode() === 'plan'" (click)="setPayMode('plan')">
+                <div style="font-size:10px;color:var(--ink-4);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">Plan activo</div>
+                <div style="font-weight:600;font-size:13px">{{ selectedClient()!.plan }}</div>
+                <div class="mono" style="font-size:12px;color:var(--ink-3);margin-top:4px">₡{{ selectedClient()!.monthlyFee.toLocaleString('es-CR') }}</div>
+              </button>
+
+              <button class="concept-card" [class.active]="payMode() === 'custom'" (click)="setPayMode('custom')">
+                <div style="font-size:10px;color:var(--ink-4);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">Personalizado</div>
+                @if (payMode() === 'custom') {
+                  <div class="month-stepper" (click)="$event.stopPropagation()">
+                    <button class="stepper-btn" (click)="addMonths(-1)" [disabled]="customMonths() <= 1">−</button>
+                    <span class="mono" style="font-size:13px;font-weight:600;min-width:56px;text-align:center">
+                      {{ customMonths() }} {{ customMonths() === 1 ? 'mes' : 'meses' }}
+                    </span>
+                    <button class="stepper-btn" (click)="addMonths(1)" [disabled]="customMonths() >= 24">+</button>
+                  </div>
+                  <div class="mono" style="font-size:12px;color:var(--accent);margin-top:4px;font-weight:600">
+                    ₡{{ (selectedClient()!.monthlyFee * customMonths()).toLocaleString('es-CR') }}
+                  </div>
+                } @else {
+                  <div style="font-size:13px;font-weight:500;color:var(--ink-3)">Elegir meses</div>
+                  <div class="mono" style="font-size:11px;color:var(--ink-4);margin-top:4px">× precio mensual</div>
+                }
+              </button>
+
+            </div>
+          </div>
+        } @else {
+          <div style="padding:14px 16px;border-radius:var(--radius-sm);background:color-mix(in oklab,var(--danger) 10%,transparent);font-size:13px;color:var(--danger)">
+            Este cliente no tiene membresía activa
+          </div>
+        }
+      } @else if (!preselectedClient()) {
+        <div style="padding:14px 16px;border-radius:var(--radius-sm);background:var(--bg-sunk);font-size:13px;color:var(--ink-4);text-align:center">
+          Selecciona un cliente para ver su membresía
+        </div>
+      }
+
+      <!-- Amount -->
+      <div class="form-group">
+        <label>Monto</label>
+        <div style="position:relative">
+          <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--ink-3);font-family:var(--font-mono)">₡</span>
+          <input class="input" type="number" [(ngModel)]="form.amount" style="padding-left:28px" />
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-group">
+          <label>Fecha de pago</label>
+          <app-date-input [(ngModel)]="form.date" />
+        </div>
+        <div class="form-group">
+          <label>Método</label>
+          <select class="input" [(ngModel)]="form.method">
+            <option>Tarjeta</option>
+            <option>Transferencia</option>
+            <option>Efectivo</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Período desde</label>
+          <app-date-input [(ngModel)]="form.periodFrom" />
+        </div>
+        <div class="form-group">
+          <label>Período hasta</label>
+          <app-date-input [(ngModel)]="form.periodTo" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Nota interna (opcional)</label>
+        <textarea class="input" rows="2" [(ngModel)]="form.note" placeholder="Observaciones..."></textarea>
+      </div>
+
+      <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer">
+        <input type="checkbox" [(ngModel)]="form.sendReceipt" style="accent-color:var(--ink);width:16px;height:16px" />
+        Enviar recibo al cliente por correo
+      </label>
+
+    </div>
+
+    <!-- Error -->
+    @if (formError()) {
+      <div style="margin-top:12px;font-size:12px;color:var(--danger);font-family:var(--font-mono)">{{ formError() }}</div>
+    }
+
+    <!-- Footer -->
+    <div class="register-footer">
+      <div>
+        <div class="label-mono">Total</div>
+        <div class="display-num" style="font-size:24px;margin-top:2px">₡{{ displayAmount().toLocaleString('es-CR') }}</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-secondary" (click)="closed.emit()">Cancelar</button>
+        <button class="btn btn-accent" [disabled]="submitting() || !form.membershipId || !payMode()" (click)="submit()">
+          {{ submitting() ? 'Registrando…' : 'Confirmar pago' }}
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div>

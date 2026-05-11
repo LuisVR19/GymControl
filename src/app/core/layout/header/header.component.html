@@ -1,0 +1,84 @@
+<header class="topbar">
+  <div class="topbar-left">
+    <h1 class="page-title">{{ pageTitle }}</h1>
+    @if (pageSubtitle) {
+      <span class="page-subtitle">{{ pageSubtitle }}</span>
+    }
+  </div>
+
+  <div class="topbar-right">
+    <!-- Invite client -->
+    <button class="btn-invite" (click)="openInviteModal()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+        <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.5"/>
+        <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.5"/>
+        <rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.5"/>
+        <rect x="5.5" y="5.5" width="2" height="2" fill="currentColor"/>
+        <rect x="16.5" y="5.5" width="2" height="2" fill="currentColor"/>
+        <rect x="5.5" y="16.5" width="2" height="2" fill="currentColor"/>
+        <path d="M14 14h3v3M17 14v3h3M14 17v3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      Invitar cliente
+    </button>
+
+    <!-- Affiliation QR -->
+    <button class="btn-invite btn-invite--ghost" (click)="openAffiliationQrModal()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+        <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.5"/>
+        <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.5"/>
+        <rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.5"/>
+        <rect x="5.5" y="5.5" width="2" height="2" fill="currentColor"/>
+        <rect x="16.5" y="5.5" width="2" height="2" fill="currentColor"/>
+        <rect x="5.5" y="16.5" width="2" height="2" fill="currentColor"/>
+        <rect x="14" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.5"/>
+        <rect x="16.5" y="16.5" width="2" height="2" fill="currentColor"/>
+      </svg>
+      QR Afiliación
+    </button>
+
+    <!-- Dark mode toggle -->
+    <button class="icon-btn" (click)="theme.toggle()" [title]="theme.isDark() ? 'Modo claro' : 'Modo oscuro'">
+      @if (theme.isDark()) {
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.5"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4l1.4-1.4M17 7l1.4-1.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      } @else {
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      }
+    </button>
+
+    <!-- Notifications -->
+    <div class="notif-wrapper">
+      <button class="icon-btn" (click)="showNotifications = !showNotifications">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M6 16V11a6 6 0 0112 0v5l1.5 2h-15L6 16zM10 21h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        @if (unreadCount > 0) {
+          <span class="notif-badge">{{ unreadCount }}</span>
+        }
+      </button>
+
+      @if (showNotifications) {
+        <div class="notif-dropdown">
+          <div class="notif-header">
+            <span style="font-weight:600;font-size:13px">Notificaciones</span>
+            <button class="btn btn-ghost btn-sm" (click)="markAllRead()">Marcar leídas</button>
+          </div>
+          @for (n of notifications; track $index) {
+            <div class="notif-item" [class.unread]="!n.read">
+              <div class="notif-dot" [class.active]="!n.read"></div>
+              <div>
+                <div style="font-size:13px">{{ n.text }}</div>
+                <div style="font-size:11px;color:var(--ink-4);font-family:var(--font-mono);margin-top:2px">{{ n.time }}</div>
+              </div>
+            </div>
+          }
+        </div>
+        <div class="notif-backdrop" (click)="showNotifications = false"></div>
+      }
+    </div>
+
+    <!-- User avatar -->
+    <app-avatar [name]="auth.displayName()" [size]="34" />
+  </div>
+</header>
+
+@if (modalOpen()) {
+  <app-invite-modal [gymId]="modalGymId()" (close)="modalOpen.set(false)" />
+}
