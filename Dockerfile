@@ -7,6 +7,13 @@ COPY package*.json ./
 RUN npm ci
 
 COPY . .
+
+ARG SUPABASE_URL
+ARG SUPABASE_ANON_KEY
+
+RUN echo "export const environment = { production: true, supabase: { url: '${SUPABASE_URL}', anonKey: '${SUPABASE_ANON_KEY}' } };" \
+    > src/environments/environment.ts
+
 RUN npm run build
 
 # Stage 2: Serve
