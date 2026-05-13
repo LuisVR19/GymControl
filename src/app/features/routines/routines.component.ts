@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, computed, effect, inject, signal, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HeaderComponent } from '../../core/layout/header/header.component';
@@ -6,6 +6,7 @@ import { AvatarComponent } from '../../shared/components/avatar/avatar.component
 import { RoutineService } from '../../core/services/routine.service';
 import { ClientService } from '../../core/services/client.service';
 import { ExerciseService } from '../../core/services/exercise.service';
+import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
 import type { Routine, RoutineDay, Exercise, GymExercise } from '../../core/models';
 
@@ -20,7 +21,20 @@ export class RoutinesComponent implements OnInit {
   readonly routineService  = inject(RoutineService);
   readonly clientService   = inject(ClientService);
   readonly exerciseService = inject(ExerciseService);
+  private readonly auth    = inject(AuthService);
   private readonly toast   = inject(ToastService);
+  private destroyRef       = inject(DestroyRef);
+
+  constructor() {
+    effect(() => {
+      const gymId = this.auth.gymId();
+      untracked(() => {
+        if (gymId && !this.routineService.routines().length && !this.routineService.loading()) {
+          this.loadData();
+        }
+      });
+    });
+  }
 
   readonly loading = this.routineService.loading;
   readonly error   = this.routineService.error;
@@ -46,12 +60,21 @@ export class RoutinesComponent implements OnInit {
   newRoutineDesc = '';
 
   ngOnInit(): void {
+    this.loadData();
+    const onVisible = () => { if (document.visibilityState === 'visible') this.loadData(); };
+    document.addEventListener('visibilitychange', onVisible);
+    this.destroyRef.onDestroy(() => document.removeEventListener('visibilitychange', onVisible));
+  }
+
+  private loadData(): void {
     this.clientService.loadClients();
+    this.exerciseService.loadExercises();
     this.routineService.loadRoutines().then(() => {
-      const first = this.routineService.routines()[0];
-      if (first) this.selectedRoutine.set(first);
+      if (!this.selectedRoutine()) {
+        const first = this.routineService.routines()[0];
+        if (first) this.selectedRoutine.set(first);
+      }
     });
-    if (!this.exerciseService.exercises().length) this.exerciseService.loadExercises();
   }
 
   selectRoutine(r: Routine): void {

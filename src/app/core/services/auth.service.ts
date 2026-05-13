@@ -43,12 +43,13 @@ export class AuthService {
   }
 
   private async loadProfile(userId: string): Promise<void> {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', userId)
       .single();
-    this.profile.set(data);
+    // Only update on success — a network error must not null out gymId
+    if (!error && data) this.profile.set(data);
   }
 
   async signIn(email: string, password: string): Promise<{ error: string | null }> {

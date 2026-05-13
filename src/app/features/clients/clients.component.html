@@ -76,7 +76,7 @@
             </tr>
           }
         } @else {
-          @for (client of filteredClients(); track client.id) {
+          @for (client of paginatedClients(); track client.id) {
             <tr class="client-row" (click)="openDetail(client)">
               <td style="padding:14px 22px">
                 <div style="display:flex;align-items:center;gap:12px">
@@ -124,7 +124,7 @@
             </tr>
           }
 
-          @if (filteredClients().length === 0) {
+          @if (paginatedClients().length === 0) {
             <tr>
               <td colspan="7">
                 <div class="empty-state">
@@ -138,6 +138,16 @@
         }
       </tbody>
     </table>
+
+    @if (!loading() && filteredClients().length > PAGE_SIZE) {
+      <app-pagination
+        [currentPage]="currentPage()"
+        [totalPages]="totalPages()"
+        [pageInfo]="pageInfo()"
+        (prev)="prevPage()"
+        (next)="nextPage()"
+      />
+    }
   </div>
 
 </div>

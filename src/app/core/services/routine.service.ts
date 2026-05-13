@@ -58,7 +58,6 @@ function mapRoutineRow(row: {
 @Injectable({ providedIn: 'root' })
 export class RoutineService {
   private auth = inject(AuthService);
-  private _reqId = 0;
 
   readonly routines = signal<Routine[]>([]);
   readonly loading = signal(false);
@@ -66,10 +65,10 @@ export class RoutineService {
 
   async loadRoutines(): Promise<void> {
     const gymId = this.auth.gymId();
-    if (!gymId) return;
+    if (!gymId) { this.loading.set(false); return; }
 
-    const reqId = ++this._reqId;
-    this.loading.set(true);
+    const isFirstLoad = !this.routines().length;
+    if (isFirstLoad) this.loading.set(true);
     this.error.set(null);
 
     try {
@@ -86,14 +85,12 @@ export class RoutineService {
         .eq('gym_id', gymId)
         .order('created_at');
 
-      if (reqId !== this._reqId) return;
       if (error) this.error.set(error.message);
       else this.routines.set((data ?? []).map(r => mapRoutineRow(r as any)));
     } catch (err) {
-      if (reqId !== this._reqId) return;
       this.error.set(err instanceof Error ? err.message : 'Error inesperado');
     } finally {
-      if (reqId === this._reqId) this.loading.set(false);
+      this.loading.set(false);
     }
   }
 

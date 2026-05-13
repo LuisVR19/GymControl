@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, computed, effect, inject, signal, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HeaderComponent } from '../../core/layout/header/header.component';
@@ -44,6 +44,18 @@ export class MembershipsComponent implements OnInit {
   private planService = inject(PlanService);
   private auth        = inject(AuthService);
   private toast       = inject(ToastService);
+  private destroyRef  = inject(DestroyRef);
+
+  constructor() {
+    effect(() => {
+      const gymId = this.auth.gymId();
+      untracked(() => {
+        if (gymId && !this.planService.plans().length && !this.planService.loading()) {
+          this.loadData();
+        }
+      });
+    });
+  }
 
   readonly plans   = this.planService.plans;
   readonly loading = this.planService.loading;
@@ -85,6 +97,13 @@ export class MembershipsComponent implements OnInit {
   readonly unitOptions = ['día', 'semana', 'mes', 'año'];
 
   ngOnInit(): void {
+    this.loadData();
+    const onVisible = () => { if (document.visibilityState === 'visible') this.loadData(); };
+    document.addEventListener('visibilitychange', onVisible);
+    this.destroyRef.onDestroy(() => document.removeEventListener('visibilitychange', onVisible));
+  }
+
+  private loadData(): void {
     this.planService.loadPlans();
   }
 

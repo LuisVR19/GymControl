@@ -52,7 +52,7 @@
     <!-- Tabs -->
     <div class="tab-bar">
       @for (tab of [['todos','Todos'],['pendientes','Pendientes'],['pagados','Pagados']]; track tab[0]) {
-        <button class="tab-btn" [class.active]="activeTab() === tab[0]" (click)="activeTab.set($any(tab[0]))">{{ tab[1] }}</button>
+        <button class="tab-btn" [class.active]="activeTab() === tab[0]" (click)="setTab($any(tab[0]))">{{ tab[1] }}</button>
       }
     </div>
 
@@ -89,7 +89,7 @@
             </tr>
           }
         } @else {
-          @for (p of filteredPayments(); track p.id) {
+          @for (p of paginatedPayments(); track p.id) {
             <tr>
               <td style="padding:12px 22px">
                 <div style="display:flex;align-items:center;gap:10px">
@@ -121,7 +121,7 @@
             </tr>
           }
 
-          @if (filteredPayments().length === 0) {
+          @if (paginatedPayments().length === 0) {
             <tr>
               <td colspan="8">
                 <div class="empty-state">
@@ -135,6 +135,16 @@
         }
       </tbody>
     </table>
+
+    @if (!loading() && filteredPayments().length > PAGE_SIZE) {
+      <app-pagination
+        [currentPage]="currentPage()"
+        [totalPages]="totalPages()"
+        [pageInfo]="pageInfo()"
+        (prev)="prevPage()"
+        (next)="nextPage()"
+      />
+    }
   </div>
 
 </div>

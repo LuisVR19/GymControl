@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject } from '@angular/core';
+import { Component, DestroyRef, OnInit, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -24,6 +24,7 @@ export class DashboardComponent implements OnInit {
   private clientService  = inject(ClientService);
   private paymentService = inject(PaymentService);
   private gymService     = inject(GymService);
+  private destroyRef     = inject(DestroyRef);
 
   readonly loading      = computed(() => this.clientService.loading() || this.paymentService.loading());
   readonly pendingCount = computed(() => this.clientService.overdueClients().length);
@@ -119,6 +120,13 @@ export class DashboardComponent implements OnInit {
   ];
 
   ngOnInit(): void {
+    this.loadData();
+    const onVisible = () => { if (document.visibilityState === 'visible') this.loadData(); };
+    document.addEventListener('visibilitychange', onVisible);
+    this.destroyRef.onDestroy(() => document.removeEventListener('visibilitychange', onVisible));
+  }
+
+  private loadData(): void {
     this.clientService.loadClients();
     this.paymentService.loadPayments();
   }

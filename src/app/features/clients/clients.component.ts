@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, computed, effect, inject, signal, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
@@ -6,22 +6,22 @@ import { HeaderComponent } from '../../core/layout/header/header.component';
 import { AvatarComponent } from '../../shared/components/avatar/avatar.component';
 import { ClientDetailComponent } from './components/client-detail/client-detail.component';
 import { DateInputComponent } from '../../shared/components/date-input/date-input.component';
+import { PaginationComponent } from '../../shared/components/pagination/pagination.component';
 import { ClientService } from '../../core/services/client.service';
-import { PlanService } from '../../core/services/plan.service';
 import { ToastService } from '../../core/services/toast.service';
 import type { Client } from '../../core/models';
 
 @Component({
   selector: 'app-clients',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, HeaderComponent, AvatarComponent, ClientDetailComponent, DateInputComponent],
+  imports: [CommonModule, FormsModule, RouterModule, HeaderComponent, AvatarComponent, ClientDetailComponent, DateInputComponent, PaginationComponent],
   templateUrl: './clients.component.html',
   styleUrl: './clients.component.scss',
 })
 export class ClientsComponent implements OnInit {
   readonly clientService = inject(ClientService);
-  readonly planService   = inject(PlanService);
   private readonly toast = inject(ToastService);
+  private destroyRef     = inject(DestroyRef);
 
   readonly loading = this.clientService.loading;
   readonly error   = this.clientService.error;
@@ -46,6 +46,37 @@ export class ClientsComponent implements OnInit {
     });
   });
 
+  readonly currentPage = signal(1);
+  readonly PAGE_SIZE   = 25;
+
+  constructor() {
+    effect(() => {
+      this.searchQuery(); this.statusFilter(); this.planFilter();
+      untracked(() => this.currentPage.set(1));
+    });
+  }
+
+  readonly totalPages = computed(() =>
+    Math.max(1, Math.ceil(this.filteredClients().length / this.PAGE_SIZE))
+  );
+
+  readonly paginatedClients = computed(() => {
+    const page  = this.currentPage();
+    const start = (page - 1) * this.PAGE_SIZE;
+    return this.filteredClients().slice(start, start + this.PAGE_SIZE);
+  });
+
+  readonly pageInfo = computed(() => {
+    const total = this.filteredClients().length;
+    const page  = this.currentPage();
+    const start = total === 0 ? 0 : (page - 1) * this.PAGE_SIZE + 1;
+    const end   = Math.min(page * this.PAGE_SIZE, total);
+    return { start, end, total };
+  });
+
+  prevPage(): void { this.currentPage.update(p => Math.max(1, p - 1)); }
+  nextPage(): void { this.currentPage.update(p => Math.min(this.totalPages(), p + 1)); }
+
   readonly statusOptions = [
     { value: 'all',      label: 'Todos' },
     { value: 'activo',   label: 'Activos' },
@@ -62,8 +93,14 @@ export class ClientsComponent implements OnInit {
   ];
 
   ngOnInit(): void {
+    this.loadData();
+    const onVisible = () => { if (document.visibilityState === 'visible') this.loadData(); };
+    document.addEventListener('visibilitychange', onVisible);
+    this.destroyRef.onDestroy(() => document.removeEventListener('visibilitychange', onVisible));
+  }
+
+  private loadData(): void {
     this.clientService.loadClients();
-    this.planService.loadPlans();
   }
 
   retry(): void {

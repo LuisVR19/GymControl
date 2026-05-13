@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, computed, effect, inject, signal, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
@@ -17,9 +17,21 @@ import type { GymExercise } from '../../core/models';
 })
 export class ExercisesComponent implements OnInit {
   readonly exerciseService = inject(ExerciseService);
-  private auth      = inject(AuthService);
-  private toast     = inject(ToastService);
-  private sanitizer = inject(DomSanitizer);
+  private auth       = inject(AuthService);
+  private toast      = inject(ToastService);
+
+  constructor() {
+    effect(() => {
+      const gymId = this.auth.gymId();
+      untracked(() => {
+        if (gymId && !this.exerciseService.exercises().length && !this.exerciseService.loading()) {
+          this.loadData();
+        }
+      });
+    });
+  }
+  private sanitizer  = inject(DomSanitizer);
+  private destroyRef = inject(DestroyRef);
 
   readonly loading  = this.exerciseService.loading;
   readonly error    = this.exerciseService.error;
@@ -68,6 +80,13 @@ export class ExercisesComponent implements OnInit {
   });
 
   ngOnInit(): void {
+    this.loadData();
+    const onVisible = () => { if (document.visibilityState === 'visible') this.loadData(); };
+    document.addEventListener('visibilitychange', onVisible);
+    this.destroyRef.onDestroy(() => document.removeEventListener('visibilitychange', onVisible));
+  }
+
+  private loadData(): void {
     this.exerciseService.loadExercises();
   }
 

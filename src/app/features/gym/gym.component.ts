@@ -1,4 +1,4 @@
-import { Component, OnInit, effect, inject } from '@angular/core';
+import { Component, DestroyRef, OnInit, effect, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HeaderComponent } from '../../core/layout/header/header.component';
@@ -24,6 +24,7 @@ interface DayHours { open: string; close: string; closed: boolean; }
 export class GymComponent implements OnInit {
   private gymService = inject(GymService);
   private toast      = inject(ToastService);
+  private destroyRef = inject(DestroyRef);
 
   readonly colors = ['#D97757', '#2A6FDB', '#1F8A5B', '#6B4FE3', '#0a0a0a'];
 
@@ -84,6 +85,13 @@ export class GymComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.loadData();
+    const onVisible = () => { if (document.visibilityState === 'visible') this.loadData(); };
+    document.addEventListener('visibilitychange', onVisible);
+    this.destroyRef.onDestroy(() => document.removeEventListener('visibilitychange', onVisible));
+  }
+
+  private loadData(): void {
     this.gymService.loadGym();
   }
 

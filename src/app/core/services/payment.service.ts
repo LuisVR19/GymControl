@@ -55,11 +55,11 @@ export interface RegisterPaymentPayload {
 @Injectable({ providedIn: 'root' })
 export class PaymentService {
   private auth = inject(AuthService);
-  private _reqId = 0;
 
   readonly payments = signal<Payment[]>([]);
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
+
 
   readonly pendingPayments = computed(() => this.payments().filter(p => p.status !== 'pagado'));
   readonly paidPayments = computed(() => this.payments().filter(p => p.status === 'pagado'));
@@ -81,10 +81,10 @@ export class PaymentService {
 
   async loadPayments(): Promise<void> {
     const gymId = this.auth.gymId();
-    if (!gymId) return;
+    if (!gymId) { this.loading.set(false); return; }
 
-    const reqId = ++this._reqId;
-    this.loading.set(true);
+    const isFirstLoad = !this.payments().length;
+    if (isFirstLoad) this.loading.set(true);
     this.error.set(null);
 
     try {
@@ -94,14 +94,12 @@ export class PaymentService {
         .eq('gym_id', gymId)
         .order('date', { ascending: false });
 
-      if (reqId !== this._reqId) return;
       if (error) this.error.set(error.message);
       else this.payments.set((data ?? []).map(mapPayment));
     } catch (err) {
-      if (reqId !== this._reqId) return;
       this.error.set(err instanceof Error ? err.message : 'Error inesperado');
     } finally {
-      if (reqId === this._reqId) this.loading.set(false);
+      this.loading.set(false);
     }
   }
 

@@ -36,7 +36,6 @@ function mapPlan(row: GymPlanRow, subscriberCount = 0): GymPlan {
 @Injectable({ providedIn: 'root' })
 export class PlanService {
   private auth = inject(AuthService);
-  private _reqId = 0;
 
   readonly plans   = signal<GymPlan[]>([]);
   readonly loading = signal(false);
@@ -46,10 +45,10 @@ export class PlanService {
 
   async loadPlans(): Promise<void> {
     const gymId = this.auth.gymId();
-    if (!gymId) return;
+    if (!gymId) { this.loading.set(false); return; }
 
-    const reqId = ++this._reqId;
-    this.loading.set(true);
+    const isFirstLoad = !this.plans().length;
+    if (isFirstLoad) this.loading.set(true);
     this.error.set(null);
 
     try {
@@ -58,12 +57,7 @@ export class PlanService {
         supabase.from('user_memberships').select('plan_id').eq('gym_id', gymId).eq('is_current', true),
       ]);
 
-      if (reqId !== this._reqId) return;
-
-      if (plansResult.error) {
-        this.error.set(plansResult.error.message);
-        return;
-      }
+      if (plansResult.error) { this.error.set(plansResult.error.message); return; }
 
       const countMap: Record<string, number> = {};
       for (const row of subsResult.data ?? []) {
@@ -72,10 +66,9 @@ export class PlanService {
 
       this.plans.set((plansResult.data ?? []).map(r => mapPlan(r as GymPlanRow, countMap[r.id] ?? 0)));
     } catch (err) {
-      if (reqId !== this._reqId) return;
       this.error.set(err instanceof Error ? err.message : 'Error inesperado');
     } finally {
-      if (reqId === this._reqId) this.loading.set(false);
+      this.loading.set(false);
     }
   }
 

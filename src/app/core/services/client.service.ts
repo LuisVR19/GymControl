@@ -33,7 +33,6 @@ function mapProgress(row: ClientProgressRow): ProgressEntry {
 @Injectable({ providedIn: 'root' })
 export class ClientService {
   private auth = inject(AuthService);
-  private _reqId = 0;
 
   readonly clients = signal<Client[]>([]);
   readonly loading = signal(false);
@@ -45,10 +44,10 @@ export class ClientService {
 
   async loadClients(): Promise<void> {
     const gymId = this.auth.gymId();
-    if (!gymId) return;
+    if (!gymId) { this.loading.set(false); return; }
 
-    const reqId = ++this._reqId;
-    this.loading.set(true);
+    const isFirstLoad = !this.clients().length;
+    if (isFirstLoad) this.loading.set(true);
     this.error.set(null);
 
     try {
@@ -58,14 +57,12 @@ export class ClientService {
         .eq('gym_id', gymId)
         .order('name');
 
-      if (reqId !== this._reqId) return;
       if (error) this.error.set(error.message);
       else this.clients.set((data ?? []).map(mapClient));
     } catch (err) {
-      if (reqId !== this._reqId) return;
       this.error.set(err instanceof Error ? err.message : 'Error inesperado');
     } finally {
-      if (reqId === this._reqId) this.loading.set(false);
+      this.loading.set(false);
     }
   }
 

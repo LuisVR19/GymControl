@@ -202,7 +202,7 @@
 .access-card {
   padding: 12px 14px;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--line);
+  border: 2px solid var(--line);
   background: var(--bg-elev);
   cursor: pointer;
   text-align: left;
@@ -210,9 +210,8 @@
   color: var(--ink);
 
   &.active {
-    border: 2px solid var(--ink);
+    border-color: var(--ink);
     background: var(--bg-sunk);
-    margin: -1px;
   }
 }
 
